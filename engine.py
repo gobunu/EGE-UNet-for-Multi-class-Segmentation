@@ -65,20 +65,18 @@ def train_one_epoch(train_loader,
 def val_one_epoch(test_loader,
                     model,
                     criterion,
+                    epoch,
                     logger,
-                    config,
-                    test_data_name=None):
+                    config):
     # switch to evaluate mode
     model.eval()
     preds = []
     gts = []
     loss_list = []
     num_classes = config.num_classes
-    if num_classes == 1:
-        num_classes = 2
     with torch.no_grad():
         for i, data in enumerate(tqdm(test_loader)):
-            img, msk, _ = data
+            img, msk = data
             img, msk = img.cuda(non_blocking=True).float(), msk.cuda(non_blocking=True).float()
 
             gt_pre, out = model(img)
@@ -88,12 +86,7 @@ def val_one_epoch(test_loader,
 
             msk = msk.cpu().detach().numpy()
             msk = np.argmax(msk, axis=1)
-            height, width= msk.shape
-            color_image = np.zeros((height, width, 3), dtype=np.uint8)
 
-            for index, color in index_to_color.items():
-                color_image[msk == index] = color
-            msk_colors = color_image
             gts.append(msk)
 
             if type(out) is tuple:
@@ -106,59 +99,47 @@ def val_one_epoch(test_loader,
             threshold = 0.5
             softmax_out = np.max(softmax_out, axis=1)[0]
             out[softmax_out < threshold] = 0
-            height, width = out.shape
-            color_image = np.zeros((height, width, 3), dtype=np.uint8)
 
-            for index, color in index_to_color.items():
-                color_image[out == index] = color
-            out_colors = color_image
             preds.append(out)
-            outputs_dict[img_name].append((img_index, out))
 
-            if i % config.save_interval == 0:
-                save_imgs(img, msk_colors, out_colors, i, config.work_dir + 'outputs/', config.datasets, config.threshold,
-                          test_data_name=test_data_name)
+        if epoch % config.val_interval == 0:
+            preds = np.array(preds).reshape(-1)
+            gts = np.array(gts).reshape(-1)
 
-        preds = np.array(preds).reshape(-1)
-        gts = np.array(gts).reshape(-1)
+            confusion_multi = confusion_matrix(gts, preds, labels=range(num_classes))
 
-        confusion_multi = confusion_matrix(gts, preds, labels=range(num_classes))
+            accuracy = 0
+            sensitivity = []
+            specificity = []
+            f1_or_dsc = []
+            miou = []
 
-        accuracy = 0
-        sensitivity = []
-        specificity = []
-        f1_or_dsc = []
-        miou = []
+            for i in range(num_classes):
 
-        for i in range(num_classes):
+                TP = confusion_multi[i, i]
+                FP = np.sum(confusion_multi[:, i]) - TP
+                FN = np.sum(confusion_multi[i, :]) - TP
+                TN = np.sum(confusion_multi) - (TP + FP + FN)
 
-            TP = confusion_multi[i, i]
-            FP = np.sum(confusion_multi[:, i]) - TP
-            FN = np.sum(confusion_multi[i, :]) - TP
-            TN = np.sum(confusion_multi) - (TP + FP + FN)
+                accuracy += TP + TN
+                sensitivity.append(TP / (TP + FN) if (TP + FN) != 0 else 0)
+                specificity.append(TN / (TN + FP) if (TN + FP) != 0 else 0)
+                f1_or_dsc.append((2 * TP) / (2 * TP + FP + FN) if (2 * TP + FP + FN) != 0 else 0)
+                miou.append(TP / (TP + FP + FN) if (TP + FP + FN) != 0 else 0)
 
-            accuracy += TP + TN
-            sensitivity.append(TP / (TP + FN) if (TP + FN) != 0 else 0)
-            specificity.append(TN / (TN + FP) if (TN + FP) != 0 else 0)
-            f1_or_dsc.append((2 * TP) / (2 * TP + FP + FN) if (2 * TP + FP + FN) != 0 else 0)
-            miou.append(TP / (TP + FP + FN) if (TP + FP + FN) != 0 else 0)
+            accuracy = accuracy / np.sum(confusion_multi) if np.sum(confusion_multi) != 0 else 0
+            mean_sensitivity = np.mean(sensitivity)
+            mean_specificity = np.mean(specificity)
+            mean_f1_or_dsc = np.mean(f1_or_dsc)
+            mean_miou = np.mean(miou)
 
-        accuracy = accuracy / np.sum(confusion_multi) if np.sum(confusion_multi) != 0 else 0
-        mean_sensitivity = np.mean(sensitivity)
-        mean_specificity = np.mean(specificity)
-        mean_f1_or_dsc = np.mean(f1_or_dsc)
-        mean_miou = np.mean(miou)
-
-        if test_data_name is not None and logger is not None:
-            log_info = f'test_datasets_name: {test_data_name}'
+            log_info = f'val epoch: {epoch}, loss: {np.mean(loss_list):.4f}, miou: {mean_miou:.4f}, f1_or_dsc: {mean_f1_or_dsc:.4f}, accuracy: {accuracy:.4f}, \
+                        specificity: {mean_specificity:.4f}, sensitivity: {mean_sensitivity:.4f}, confusion_matrix: {confusion_multi}'
             print(log_info)
             logger.info(log_info)
-
-        log_info = f'test of best model, loss: {np.mean(loss_list):.4f}, miou: {mean_miou:.4f}, f1_or_dsc: {mean_f1_or_dsc:.4f}, accuracy: {accuracy:.4f}, \
-                    specificity: {mean_specificity:.4f}, sensitivity: {mean_sensitivity:.4f}, confusion_matrix: {confusion_multi}'
-        print(log_info)
-
-        if logger is not None:
+        else:
+            log_info = f'val epoch: {epoch}, loss: {np.mean(loss_list):.4f}'
+            print(log_info)
             logger.info(log_info)
 
     return np.mean(loss_list)

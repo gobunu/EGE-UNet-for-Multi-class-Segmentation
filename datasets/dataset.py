@@ -38,7 +38,8 @@ class NPY_datasets(Dataset):
         img_path, msk_path = self.data[indx]
         img = np.array(Image.open(img_path).convert('RGB'))
         msk = np.expand_dims(np.array(Image.open(msk_path).convert('L')), axis=2)
-        msk = np.eye(num_classes)[msk.astype(int).squeeze()]
+        if num_classes > 1:
+            msk = np.eye(num_classes)[msk.astype(int).squeeze()]
         img, msk = self.transformer((img, msk))
         return img, msk
 

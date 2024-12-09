@@ -39,16 +39,10 @@ def main(config):
     log_config_info(config, logger)
 
 
-
-
-
     print('#----------GPU init----------#')
     os.environ["CUDA_VISIBLE_DEVICES"] = config.gpu_id
     set_seed(config.seed)
     torch.cuda.empty_cache()
-
-
-
 
 
     print('#----------Preparing dataset----------#')
@@ -67,9 +61,6 @@ def main(config):
                                 drop_last=True)
 
 
-
-
-
     print('#----------Prepareing Model----------#')
     model_cfg = config.model_config
     if config.network == 'egeunet':
@@ -83,25 +74,16 @@ def main(config):
     model = model.cuda()
 
 
-
-
-
     print('#----------Prepareing loss, opt, sch and amp----------#')
     criterion = config.criterion
     optimizer = get_optimizer(config, model)
     scheduler = get_scheduler(config, optimizer)
 
 
-
-
-
     print('#----------Set other params----------#')
     min_loss = 999
     start_epoch = 1
     min_epoch = 1
-
-
-
 
 
     if os.path.exists(resume_model):
@@ -116,8 +98,6 @@ def main(config):
 
         log_info = f'resuming model from {resume_model}. resume_epoch: {saved_epoch}, min_loss: {min_loss:.4f}, min_epoch: {min_epoch}, loss: {loss:.4f}'
         logger.info(log_info)
-
-
 
 
     step = 0
@@ -164,21 +144,6 @@ def main(config):
                 'scheduler_state_dict': scheduler.state_dict(),
             }, os.path.join(checkpoint_dir, 'latest.pth')) 
 
-    if os.path.exists(os.path.join(checkpoint_dir, 'best.pth')):
-        print('#----------Testing----------#')
-        best_weight = torch.load(config.work_dir + 'checkpoints/best.pth', map_location=torch.device('cpu'))
-        model.load_state_dict(best_weight)
-        loss = test_one_epoch(
-                val_loader,
-                model,
-                criterion,
-                logger,
-                config,
-            )
-        os.rename(
-            os.path.join(checkpoint_dir, 'best.pth'),
-            os.path.join(checkpoint_dir, f'best-epoch{min_epoch}-loss{min_loss:.4f}.pth')
-        )      
 
 
 if __name__ == '__main__':
