@@ -1,6 +1,6 @@
 
-# EGE-UNet-for-Multi-class-Segmentation
-This version of EGE-UNet is a modification of the [original EGE-UNet model](https://github.com/JCruan519/EGE-UNet?tab=Apache-2.0-1-ov-file).
+# EGE-UNet for Multi class Segmentation
+This version of EGE-UNet is a modification of the [original EGE-UNet model](https://github.com/JCruan519/EGE-UNet?tab=Apache-2.0-1-ov-file). It is not the official implementation, but aims to provide similar functionality with some enhancements and adjustments.
 
 **0. Main Environments**
 - python 3.8
@@ -46,7 +46,7 @@ cd EGE-UNet
 python train.py
 ```
 
-**4. Obtain the outputs.**
+**3. Obtain the outputs.**
 - After trianing, you could obtain the outputs in './results/'
-- To obtain the predicted 3D masks for the KiTS19 dataset, use the `test_one_epoch_3d` class in the `test.py` script for inference.
+- To obtain the predicted 3D masks for the KiTS19 dataset, use the `test_one_epoch_3d` class in the `test.py` script for inference.After that, run `change_affine_matrix.py` to apply the correct affine matrix to the predicted masks.
 
