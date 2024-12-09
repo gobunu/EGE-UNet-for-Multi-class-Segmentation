@@ -6,8 +6,9 @@ import random
 import shutil
 from tqdm import tqdm
 
-root_dir = r'D:\DeepLearning\homework_demo\SegData\kidney'
-output_dir = r'D:\DeepLearning\homework_demo\SegData\kidney\output_pngs'
+root_dir = ''
+output_dir = ''
+os.makedirs(output_dir, exist_ok=True)
 
 case_dirs = [d for d in os.listdir(root_dir) if os.path.isdir(os.path.join(root_dir, d))]
 
