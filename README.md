@@ -51,7 +51,7 @@ python train.py
 ```
 
 ## 4. Obtain the outputs.
-- After trianing, you could obtain the outputs in './results/'
+- After trianing, you could obtain the outputs in `./results/`
 - To obtain the predicted 3D masks for the KiTS19 dataset, use the `test_one_epoch_3d` class in the `test.py` script for inference.After that, run `change_affine_matrix.py` to apply the correct affine matrix to the predicted masks.
 
 ## 5. Deployment.
